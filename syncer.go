@@ -21,6 +21,7 @@
 package zapsyslog
 
 import (
+	"crypto/tls"
 	"net"
 
 	"go.uber.org/zap/zapcore"
@@ -32,16 +33,18 @@ var (
 
 // ConnSyncer describes connection sink for syslog.
 type ConnSyncer struct {
-	network string
-	raddr   string
-	conn    net.Conn
+	network   string
+	raddr     string
+	conn      net.Conn
+	tlsConfig *tls.Config
 }
 
-// NewConnSyncer returns a new conn sink for syslog.
-func NewConnSyncer(network, raddr string) (*ConnSyncer, error) {
+// NewConnSyncer returns a new conn sink for syslog. Pass nil as tlsConfig to disable TLS.
+func NewConnSyncer(network, raddr string, tlsConfig *tls.Config) (*ConnSyncer, error) {
 	s := &ConnSyncer{
-		network: network,
-		raddr:   raddr,
+		network:   network,
+		raddr:     raddr,
+		tlsConfig: tlsConfig,
 	}
 
 	err := s.connect()
@@ -61,7 +64,12 @@ func (s *ConnSyncer) connect() error {
 	}
 
 	var c net.Conn
-	c, err := net.Dial(s.network, s.raddr)
+	var err error
+	if s.tlsConfig != nil {
+		c, err = tls.Dial(s.network, s.raddr, s.tlsConfig)
+	} else {
+		c, err = net.Dial(s.network, s.raddr)
+	}
 	if err != nil {
 		return err
 	}

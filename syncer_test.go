@@ -147,7 +147,7 @@ func TestWrite(t *testing.T) {
 		addr, sock, srvWG := startServer("udp", "", done)
 		defer srvWG.Wait()
 		defer sock.Close()
-		l, err := NewConnSyncer("udp", addr)
+		l, err := NewConnSyncer("udp", addr, nil)
 		if err != nil {
 			t.Fatalf("NewConnSyncer() failed: %v", err)
 		}
@@ -166,7 +166,7 @@ func TestConcurrentWrite(t *testing.T) {
 	addr, sock, srvWG := startServer("udp", "", make(chan string, 1))
 	defer srvWG.Wait()
 	defer sock.Close()
-	s, err := NewConnSyncer("udp", addr)
+	s, err := NewConnSyncer("udp", addr, nil)
 	if err != nil {
 		t.Fatalf("NewConnSyncer() failed: %v", err)
 	}
@@ -215,7 +215,7 @@ func TestConcurrentReconnect(t *testing.T) {
 	for i := 0; i < N; i++ {
 		go func() {
 			defer wg.Done()
-			s, err := NewConnSyncer("tcp", addr)
+			s, err := NewConnSyncer("tcp", addr, nil)
 			if err != nil {
 				t.Errorf("NewConnSyncer() failed: %v", err)
 				return
@@ -252,7 +252,7 @@ func TestFailedToConnect(t *testing.T) {
 	sock.Close()
 	srvWG.Wait()
 
-	_, err := NewConnSyncer("tcp", addr)
+	_, err := NewConnSyncer("tcp", addr, nil)
 	if err == nil {
 		t.Fatalf("NewConnSyncer() connect to an invalid address should returns error")
 	}
@@ -263,7 +263,7 @@ func TestSync(t *testing.T) {
 	defer srvWG.Wait()
 	defer sock.Close()
 	// Should always be nil
-	s, err := NewConnSyncer("udp", addr)
+	s, err := NewConnSyncer("udp", addr, nil)
 	if err != nil {
 		t.Fatalf("NewConnSyncer() failed: %v", err)
 	}
