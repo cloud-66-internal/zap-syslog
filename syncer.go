@@ -23,6 +23,7 @@ package zapsyslog
 import (
 	"crypto/tls"
 	"net"
+	"time"
 
 	"go.uber.org/zap/zapcore"
 )
@@ -37,14 +38,16 @@ type ConnSyncer struct {
 	raddr     string
 	conn      net.Conn
 	tlsConfig *tls.Config
+	timeout   *time.Duration
 }
 
 // NewConnSyncer returns a new conn sink for syslog. Pass nil as tlsConfig to disable TLS.
-func NewConnSyncer(network, raddr string, tlsConfig *tls.Config) (*ConnSyncer, error) {
+func NewConnSyncer(network, raddr string, tlsConfig *tls.Config, timeout *time.Duration) (*ConnSyncer, error) {
 	s := &ConnSyncer{
 		network:   network,
 		raddr:     raddr,
 		tlsConfig: tlsConfig,
+		timeout:   timeout,
 	}
 
 	err := s.connect()
@@ -66,9 +69,27 @@ func (s *ConnSyncer) connect() error {
 	var c net.Conn
 	var err error
 	if s.tlsConfig != nil {
-		c, err = tls.Dial(s.network, s.raddr, s.tlsConfig)
+		var dialer *tls.Dialer
+		if s.timeout != nil {
+			dialer = &tls.Dialer{
+				NetDialer: &net.Dialer{
+					Timeout: *s.timeout,
+				},
+			}
+		} else {
+			dialer = &tls.Dialer{}
+		}
+		c, err = dialer.Dial(s.network, s.raddr)
 	} else {
-		c, err = net.Dial(s.network, s.raddr)
+		var dialer *net.Dialer
+		if s.timeout != nil {
+			dialer = &net.Dialer{
+				Timeout: *s.timeout,
+			}
+		} else {
+			dialer = &net.Dialer{}
+		}
+		c, err = dialer.Dial(s.network, s.raddr)
 	}
 	if err != nil {
 		return err
